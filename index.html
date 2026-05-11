@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수행평가·세특 활동 탐색기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=SUIT:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Static HTML Activity Explorer</p>
+        <h1>수행평가·세특 활동 탐색기</h1>
+        <p class="hero-text">
+          이 자료는 수행평가와 세특 활동을 준비할 때 참고할 수 있는 활동 아이디어 모음입니다.
+          제시된 활동을 그대로 제출하기보다, 현재 수업의 평가 기준, 담당 선생님의 안내,
+          자신의 관심사와 수준에 맞게 조정해 사용하세요. 좋은 활동은 거창한 주제보다 교과 개념에서 출발해,
+          내가 직접 자료를 모으고 분석한 뒤 생각의 변화가 드러나는 활동입니다.
+          친구를 대상으로 설문·관찰·자료 수집을 할 경우에는 반드시 동의를 구하고 익명으로 처리해야 합니다.
+        </p>
+      </div>
+      <aside class="hero-note">
+        <h2>활용 전 체크</h2>
+        <ul>
+          <li>수업의 평가 기준과 연결되는지 확인하기</li>
+          <li>직접 실행 가능한 범위인지 점검하기</li>
+          <li>자료 수집 시 동의와 익명 처리 지키기</li>
+        </ul>
+        <button id="copy-template-button" class="ghost-button compact-button" type="button">활동 계획서 초안만 복사</button>
+      </aside>
+    </header>
+
+    <main class="layout">
+      <section class="controls-panel" aria-label="검색 및 필터">
+        <div class="controls-heading">
+          <div>
+            <p class="section-kicker">Search Filters</p>
+            <h2>조건으로 활동 좁혀보기</h2>
+          </div>
+          <p class="controls-help">관심 계열, 과목, 활동 방식 등을 눌러 원하는 활동만 골라볼 수 있습니다.</p>
+        </div>
+
+        <div class="search-block">
+          <label for="keyword-search">키워드 검색</label>
+          <div class="search-input-wrap">
+            <input
+              id="keyword-search"
+              type="search"
+              placeholder="예: 수학교육, AI, 생명윤리, 미세먼지, 데이터 분석"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+
+        <div class="filter-grid" id="filter-grid"></div>
+
+        <div class="toolbar">
+          <button id="reset-button" class="secondary-button" type="button">필터 초기화</button>
+          <div class="result-count">
+            검색 결과 <strong id="result-count">0</strong>개
+          </div>
+        </div>
+      </section>
+
+      <section class="results-panel" aria-label="활동 검색 결과">
+        <div id="active-filters" class="active-filters" aria-live="polite"></div>
+
+        <section class="saved-panel" aria-label="담은 활동">
+          <div class="saved-panel-header">
+            <div>
+              <p class="section-kicker">Saved Activities</p>
+              <h2>담은 활동 <strong id="saved-count">0</strong>개</h2>
+            </div>
+            <div class="saved-panel-actions">
+              <button id="copy-saved-button" class="ghost-button" type="button">담은 활동 복사</button>
+              <button id="clear-saved-button" class="ghost-button" type="button">비우기</button>
+            </div>
+          </div>
+          <p class="saved-panel-help">마음에 드는 활동을 먼저 담아두고, 마지막에 한꺼번에 살펴보거나 복사할 수 있습니다.</p>
+          <div id="saved-list" class="saved-list">
+            <p class="saved-empty">아직 담은 활동이 없습니다. 카드의 담기 버튼을 눌러 보세요.</p>
+          </div>
+        </section>
+
+        <section id="compare-panel" class="compare-panel" aria-label="활동 비교" hidden>
+          <div class="compare-header">
+            <div>
+              <p class="section-kicker">Compare Activities</p>
+              <h2>담은 활동 비교하기</h2>
+            </div>
+            <div class="compare-actions">
+              <button id="clear-compare-button" class="ghost-button" type="button">선택 해제</button>
+            </div>
+          </div>
+          <p class="compare-help">더 마음이 가는 칸을 눌러 간단히 점수를 매겨볼 수 있습니다.</p>
+          <div id="compare-summary" class="compare-summary"></div>
+          <div id="compare-results" class="compare-results"></div>
+        </section>
+
+        <div id="results-grid" class="results-grid"></div>
+        <div id="empty-state" class="empty-state" hidden>
+          <h3>조건에 맞는 활동이 아직 없습니다.</h3>
+          <p>검색어를 지우거나 필터를 줄여서 다시 찾아보세요.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="detail-modal" class="detail-modal">
+    <div class="modal-header">
+      <div>
+        <p class="section-kicker">Activity Detail</p>
+        <h2 id="modal-title"></h2>
+      </div>
+      <div class="modal-actions">
+        <button id="modal-save-button" class="save-button" type="button">이 활동 담기</button>
+        <button id="modal-copy-button" class="ghost-button" type="button">이 활동 복사하기</button>
+        <button id="close-modal-button" class="icon-button" type="button" aria-label="닫기">×</button>
+      </div>
+    </div>
+    <div id="modal-content" class="modal-content"></div>
+  </dialog>
+
+  <template id="card-template">
+    <article class="activity-card">
+      <div class="card-badges"></div>
+      <h3 class="card-title"></h3>
+      <p class="card-one-line"></p>
+      <dl class="card-meta">
+        <div>
+          <dt>관련 개념 키워드</dt>
+          <dd class="card-concepts"></dd>
+        </div>
+        <div>
+          <dt>추천 대상</dt>
+          <dd class="card-career-fit"></dd>
+        </div>
+        <div>
+          <dt>수행평가 형식</dt>
+          <dd class="card-assessment"></dd>
+        </div>
+      </dl>
+      <div class="card-actions">
+        <button class="detail-button" type="button">자세히 보기</button>
+        <button class="copy-button" type="button">복사하기</button>
+        <button class="save-button" type="button">담기</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="activities.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
