@@ -3,7 +3,6 @@ const FILTER_OPTIONS = {
   subjects: ["국어", "수학", "영어", "사회", "역사", "윤리", "물리", "화학", "생명과학", "지구과학", "정보", "기술·가정", "보건", "예술·체육"],
   activityTypes: ["자료조사형", "설문조사형", "실험·측정형", "토론·논증형", "데이터분석형", "제작·설계형", "발표·보고서형", "캠페인·기획형", "독서연계형"],
   difficulty: ["기초형", "발전형", "심화형"],
-  gradeTerms: ["1학년 1학기", "1학년 2학기", "2학년 1학기", "2학년 2학기", "3학년 1학기"],
   assessmentTypes: ["보고서", "발표", "토론", "실험", "프로젝트", "포트폴리오", "모둠활동", "개인탐구"]
 };
 
@@ -12,7 +11,6 @@ const FILTER_LABELS = {
   subjects: "과목",
   activityTypes: "활동 방식",
   difficulty: "난이도",
-  gradeTerms: "학년·학기",
   assessmentTypes: "수행평가 형식"
 };
 
@@ -35,7 +33,6 @@ const state = {
   subjects: "",
   activityTypes: "",
   difficulty: "",
-  gradeTerms: "",
   assessmentTypes: ""
 };
 
@@ -69,6 +66,9 @@ const modalSaveButton = document.querySelector("#modal-save-button");
 const closeModalButton = document.querySelector("#close-modal-button");
 const cardTemplate = document.querySelector("#card-template");
 
+const RESULTS_PAGE_SIZE = 40;
+let visibleResultCount = RESULTS_PAGE_SIZE;
+
 init();
 
 function init() {
@@ -79,6 +79,7 @@ function init() {
 
   keywordInput.addEventListener("input", (event) => {
     state.keyword = event.target.value.trim();
+    visibleResultCount = RESULTS_PAGE_SIZE;
     syncUrl();
     render();
   });
@@ -87,6 +88,7 @@ function init() {
     Object.keys(state).forEach((key) => {
       state[key] = "";
     });
+    visibleResultCount = RESULTS_PAGE_SIZE;
 
     keywordInput.value = "";
     filterGrid.querySelectorAll("select").forEach((select) => {
@@ -184,6 +186,7 @@ function buildFilters() {
 
     select.addEventListener("change", (event) => {
       state[key] = event.target.value;
+      visibleResultCount = RESULTS_PAGE_SIZE;
       syncUrl();
       render();
     });
@@ -241,7 +244,8 @@ function render() {
   renderActiveFilters();
   renderSavedActivities();
   renderComparePanel();
-  resultCount.textContent = String(filteredActivities.length);
+  const shownActivities = filteredActivities.slice(0, visibleResultCount);
+  resultCount.textContent = `${filteredActivities.length}개 중 ${shownActivities.length}개 표시`;
   resultsGrid.innerHTML = "";
 
   if (filteredActivities.length === 0) {
@@ -251,7 +255,7 @@ function render() {
 
   emptyState.hidden = true;
 
-  filteredActivities.forEach((activity) => {
+  shownActivities.forEach((activity) => {
     const fragment = cardTemplate.content.cloneNode(true);
     const badges = fragment.querySelector(".card-badges");
     const saveButton = fragment.querySelector(".save-button");
@@ -262,7 +266,18 @@ function render() {
     createBadge(badges, activity.tracks[0], "badge-track");
     createBadge(badges, activity.activityTypes[0], "badge-type");
 
-    fragment.querySelector(".card-title").textContent = activity.title;
+    const cardTitle = fragment.querySelector(".card-title");
+    cardTitle.textContent = activity.title;
+    cardTitle.tabIndex = 0;
+    cardTitle.setAttribute("role", "button");
+    cardTitle.setAttribute("aria-label", `${activity.title} 자세히 보기`);
+    cardTitle.addEventListener("click", () => openDetailModal(activity));
+    cardTitle.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openDetailModal(activity);
+      }
+    });
     fragment.querySelector(".card-one-line").textContent = activity.oneLine;
     fragment.querySelector(".card-concepts").textContent = activity.concepts.join(", ");
     fragment.querySelector(".card-career-fit").textContent = activity.careerFit.join(", ");
@@ -282,6 +297,33 @@ function render() {
 
     resultsGrid.append(fragment);
   });
+
+  renderLoadMoreControl(filteredActivities.length, shownActivities.length);
+}
+
+function renderLoadMoreControl(totalCount, shownCount) {
+  if (shownCount >= totalCount) {
+    return;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "results-more-wrap";
+
+  const status = document.createElement("p");
+  status.className = "results-more-status";
+  status.textContent = `총 ${totalCount}개 중 ${shownCount}개를 보고 있습니다.`;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ghost-button";
+  button.textContent = "40개 더 보기";
+  button.addEventListener("click", () => {
+    visibleResultCount += RESULTS_PAGE_SIZE;
+    render();
+  });
+
+  wrap.append(status, button);
+  resultsGrid.append(wrap);
 }
 
 function renderSavedActivities() {
@@ -554,7 +596,6 @@ function matchesFilters(activity) {
     matchesSelect(activity.subjects, state.subjects) &&
     matchesSelect(activity.activityTypes, state.activityTypes) &&
     matchesSelect([activity.difficulty], state.difficulty) &&
-    matchesSelect(activity.gradeTerms, state.gradeTerms) &&
     matchesSelect(activity.assessmentTypes, state.assessmentTypes)
   );
 }
@@ -565,27 +606,14 @@ function matchesSelect(values, selectedValue) {
 
 function buildSearchableText(activity) {
   return [
-    activity.id,
     activity.title,
     activity.oneLine,
     activity.inquiryQuestion,
-    ...activity.tracks,
-    ...activity.subjects,
-    ...activity.gradeTerms,
-    ...activity.activityTypes,
-    ...activity.assessmentTypes,
-    activity.difficulty,
     ...activity.concepts,
-    ...activity.careerFit,
     ...activity.steps,
     ...activity.rawData,
-    ...activity.recordPoint,
-    ...activity.evaluationElements,
-    ...activity.connectFromGrade1,
     activity.basicVersion,
-    activity.advancedVersion,
-    ...activity.checkBeforeUse,
-    ...activity.warnings
+    activity.advancedVersion
   ].join(" ").toLowerCase();
 }
 
@@ -620,41 +648,28 @@ function openDetailModal(activity) {
   summary.className = "detail-summary";
   summary.innerHTML = `
     <p><strong>한 줄 개요</strong><br>${escapeHtml(activity.oneLine)}</p>
-    <p><strong>추천 대상</strong><br>${escapeHtml(activity.careerFit.join(", "))}</p>
     <p><strong>탐구 질문</strong><br>${escapeHtml(activity.inquiryQuestion)}</p>
-    <p><strong>활용 안내</strong><br>아래 키워드를 현재 배우는 단원 개념과 연결해 더 구체적인 주제로 좁혀 보세요.</p>
   `;
+
+  const versionGrid = document.createElement("div");
+  versionGrid.className = "detail-grid detail-version-grid";
+  versionGrid.append(
+    buildParagraphSection("기초형 버전", activity.basicVersion),
+    buildParagraphSection("심화형 버전", activity.advancedVersion)
+  );
 
   const grid = document.createElement("div");
   grid.className = "detail-grid";
 
   grid.append(
-    buildSection("관련 개념 키워드", activity.concepts),
     buildSection("실행 단계", activity.steps),
     buildSection("직접 수집 가능한 자료", activity.rawData),
-    buildSection("1학년 활동과 연결하기", activity.connectFromGrade1),
-    buildParagraphSection("기초형 버전", activity.basicVersion),
-    buildParagraphSection("심화형 버전", activity.advancedVersion),
     buildSection("세특에 드러날 수 있는 역량", activity.recordPoint),
-    buildSection("평가 요소", activity.evaluationElements),
     buildSection("수행평가 적용 전 확인할 점", activity.checkBeforeUse),
     buildSection("주의사항", activity.warnings)
   );
 
-  const meta = document.createElement("section");
-  meta.className = "detail-section";
-  meta.innerHTML = `
-    <h3>기본 정보</h3>
-    <div class="detail-tags">
-      ${[activity.difficulty, ...activity.tracks, ...activity.subjects, ...activity.activityTypes, ...activity.assessmentTypes]
-        .map((tag) => `<span>${escapeHtml(tag)}</span>`)
-        .join("")}
-    </div>
-    <p><strong>권장 학년·학기</strong><br>${escapeHtml(activity.gradeTerms.join(", "))}</p>
-    <p><strong>활동 ID</strong><br>${escapeHtml(activity.id)}</p>
-  `;
-
-  modalContent.append(summary, meta, grid);
+  modalContent.append(summary, versionGrid, grid);
   detailModal.showModal();
   modalContent.scrollTop = 0;
 }
@@ -711,13 +726,11 @@ function buildSavedActivitiesCopy() {
 function buildActivitySummary(activity, includeTemplate) {
   const lines = [
     `[${activity.title}]`,
-    `활동 ID: ${activity.id}`,
     `난이도: ${activity.difficulty}`,
     `관심 계열: ${activity.tracks.join(", ")}`,
     `과목: ${activity.subjects.join(", ")}`,
     `활동 방식: ${activity.activityTypes.join(", ")}`,
     `수행평가 형식: ${activity.assessmentTypes.join(" / ")}`,
-    `권장 학년·학기: ${activity.gradeTerms.join(", ")}`,
     "",
     `한 줄 설명: ${activity.oneLine}`,
     `탐구 질문: ${activity.inquiryQuestion}`,

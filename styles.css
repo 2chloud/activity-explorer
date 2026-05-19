@@ -196,7 +196,7 @@ button {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-top: 20px;
 }
@@ -517,6 +517,22 @@ button {
   pointer-events: none;
 }
 
+.results-more-wrap {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 20px 0 4px;
+}
+
+.results-more-status {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .card-badges {
   display: flex;
   gap: 8px;
@@ -553,6 +569,21 @@ button {
   margin: 0;
   font-size: 1.25rem;
   line-height: 1.35;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.card-title:hover,
+.card-title:focus-visible {
+  color: var(--brand-deep);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.card-title:focus-visible {
+  outline: 3px solid rgba(191, 91, 44, 0.24);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 
 .card-one-line {
