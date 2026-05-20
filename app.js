@@ -41,7 +41,12 @@ const compareVotes = {};
 let compareSelectionIds = [];
 let currentModalActivity = null;
 let showAllCompareRows = false;
+let currentView = "search";
 
+const searchViewButton = document.querySelector("#search-view-button");
+const roadmapViewButton = document.querySelector("#roadmap-view-button");
+const roadmapPanel = document.querySelector("#roadmap-panel");
+const roadmapGrid = document.querySelector("#roadmap-grid");
 const keywordInput = document.querySelector("#keyword-search");
 const filterGrid = document.querySelector("#filter-grid");
 const resultsGrid = document.querySelector("#results-grid");
@@ -76,6 +81,11 @@ function init() {
   buildFilters();
   keywordInput.value = state.keyword;
   render();
+  renderRoadmaps();
+  setView("search");
+
+  searchViewButton.addEventListener("click", () => setView("search"));
+  roadmapViewButton.addEventListener("click", () => setView("roadmap"));
 
   keywordInput.addEventListener("input", (event) => {
     state.keyword = event.target.value.trim();
@@ -236,6 +246,81 @@ function syncUrl() {
 
   const nextUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
   window.history.replaceState({}, "", nextUrl);
+}
+
+function setView(view) {
+  currentView = view;
+  const isRoadmap = view === "roadmap";
+  searchViewButton.classList.toggle("is-active", !isRoadmap);
+  roadmapViewButton.classList.toggle("is-active", isRoadmap);
+  searchViewButton.setAttribute("aria-pressed", String(!isRoadmap));
+  roadmapViewButton.setAttribute("aria-pressed", String(isRoadmap));
+  document.querySelector(".controls-panel").hidden = isRoadmap;
+  document.querySelector(".results-panel").hidden = isRoadmap;
+  roadmapPanel.hidden = !isRoadmap;
+}
+
+function renderRoadmaps() {
+  if (!window.ROADMAPS || !roadmapGrid) {
+    return;
+  }
+
+  roadmapGrid.innerHTML = "";
+  window.ROADMAPS.forEach((roadmap) => {
+    const card = document.createElement("article");
+    card.className = "roadmap-card";
+
+    const title = document.createElement("h3");
+    title.textContent = roadmap.category;
+
+    const table = document.createElement("div");
+    table.className = "roadmap-table";
+    table.style.setProperty("--stage-count", roadmap.stages.length);
+
+    const spacer = document.createElement("div");
+    spacer.className = "roadmap-group-label roadmap-stage-spacer";
+    table.append(spacer);
+
+    roadmap.stages.forEach((stage) => {
+      const stageHeader = document.createElement("div");
+      stageHeader.className = "roadmap-stage";
+      stageHeader.textContent = stage;
+      table.append(stageHeader);
+    });
+
+    roadmap.groups.forEach((group) => {
+      const groupLabel = document.createElement("div");
+      groupLabel.className = "roadmap-group-label";
+      groupLabel.textContent = group.name;
+      table.append(groupLabel);
+
+      roadmap.stages.forEach((stage) => {
+        const item = group.items.find((next) => next.stage === stage);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "roadmap-title";
+        button.textContent = item ? item.title : "";
+        button.disabled = !item;
+        if (item) {
+          button.addEventListener("click", () => focusRoadmapTitle(item.title));
+        }
+        table.append(button);
+      });
+    });
+
+    card.append(title, table);
+    roadmapGrid.append(card);
+  });
+}
+
+function focusRoadmapTitle(title) {
+  state.keyword = title;
+  visibleResultCount = RESULTS_PAGE_SIZE;
+  keywordInput.value = title;
+  syncUrl();
+  render();
+  setView("search");
+  document.querySelector(".results-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function render() {
