@@ -732,7 +732,7 @@ button {
 
 .roadmap-table {
   display: grid;
-  grid-template-columns: 72px repeat(var(--stage-count), minmax(132px, 1fr));
+  grid-template-columns: 84px repeat(var(--stage-count), minmax(132px, 1fr));
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -935,7 +935,7 @@ button {
   }
 
   .roadmap-table {
-    grid-template-columns: 64px repeat(var(--stage-count), minmax(128px, 1fr));
+    grid-template-columns: 82px repeat(var(--stage-count), minmax(128px, 1fr));
   }
 
   .saved-list,
