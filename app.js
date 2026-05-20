@@ -1,7 +1,7 @@
 const FILTER_OPTIONS = {
   tracks: ["인문", "사회", "상경", "자연", "공학", "의약·보건", "교육", "예체능", "융합·자율전공"],
-  subjects: ["국어", "수학", "영어", "사회", "역사", "윤리", "물리", "화학", "생명과학", "지구과학", "정보", "기술·가정", "보건", "예술·체육"],
-  activityTypes: ["자료조사형", "설문조사형", "실험·측정형", "토론·논증형", "데이터분석형", "제작·설계형", "발표·보고서형", "캠페인·기획형", "독서연계형"],
+  subjects: ["국어", "수학", "외국어", "사회", "역사", "윤리", "물리", "화학", "생명과학", "지구과학", "정보", "기술·가정", "보건", "예술·체육"],
+  activityTypes: ["자료조사형", "설문조사형", "실험·측정형", "토론·논증형", "데이터분석형", "제작·설계형", "발표·보고서형", "캠페인·기획형"],
   difficulty: ["기초형", "발전형", "심화형"],
   assessmentTypes: ["보고서", "발표", "토론", "실험", "프로젝트", "포트폴리오", "모둠활동", "개인탐구"]
 };
@@ -695,6 +695,7 @@ function buildSearchableText(activity) {
     activity.oneLine,
     activity.inquiryQuestion,
     ...activity.concepts,
+    ...activity.subjects.filter((subject) => subject === "외국어"),
     ...activity.steps,
     ...activity.rawData,
     activity.basicVersion,
