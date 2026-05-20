@@ -354,6 +354,7 @@ function focusRoadmapTitle(title) {
 function render() {
   const filteredActivities = window.ACTIVITIES.filter(matchesFilters);
 
+  syncFilterVisualState();
   renderActiveFilters();
   renderSavedActivities();
   renderComparePanel();
@@ -697,6 +698,22 @@ function syncModalButtons() {
   const saved = isSaved(currentModalActivity.id);
   modalSaveButton.textContent = saved ? "담은 활동에서 빼기" : "이 활동 담기";
   modalSaveButton.classList.toggle("is-saved", saved);
+}
+
+function syncFilterVisualState() {
+  const hasActiveFilters = Object.values(state).some(Boolean);
+  resetButton.classList.toggle("has-active-filters", hasActiveFilters);
+
+  Object.keys(FILTER_OPTIONS).forEach((key) => {
+    const select = document.querySelector(`#filter-${key}`);
+    if (!select) {
+      return;
+    }
+
+    const hasValue = Boolean(state[key]);
+    select.classList.toggle("has-value", hasValue);
+    select.closest(".filter-field")?.classList.toggle("has-value", hasValue);
+  });
 }
 
 function matchesFilters(activity) {
