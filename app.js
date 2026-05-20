@@ -265,8 +265,36 @@ function renderRoadmaps() {
     return;
   }
 
+  const roadmapOrder = [
+    "국제/외교",
+    "방송/미디어",
+    "관광/숙박",
+    "행정/정치",
+    "역사/지역",
+    "경영/경제",
+    "언어/문학",
+    "외국어(영어·일본어·중국어)",
+    "교육",
+    "화학/화학공학",
+    "물리/기계",
+    "전자/전기",
+    "생명/생명공학",
+    "식품",
+    "IT/컴퓨팅",
+    "건설/건축",
+    "에너지",
+    "농수축산",
+    "의료/보건",
+    "간호/보건"
+  ];
+  const orderedRoadmaps = [...window.ROADMAPS].sort((a, b) => {
+    const aIndex = roadmapOrder.indexOf(a.category);
+    const bIndex = roadmapOrder.indexOf(b.category);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+
   roadmapGrid.innerHTML = "";
-  window.ROADMAPS.forEach((roadmap) => {
+  orderedRoadmaps.forEach((roadmap) => {
     const card = document.createElement("article");
     card.className = "roadmap-card";
 

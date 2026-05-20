@@ -1695,7 +1695,7 @@ window.ROADMAPS = [
     ]
   },
   {
-    "category": "영어/일본어/중국어",
+    "category": "외국어(영어·일본어·중국어)",
     "source": "영어_일본어_중국어.txt",
     "stages": [
       "입문",
