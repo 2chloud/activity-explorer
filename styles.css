@@ -707,6 +707,7 @@ button {
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .roadmap-stage,
@@ -728,6 +729,18 @@ button {
   color: var(--brand-deep);
   font-weight: 800;
   text-align: center;
+}
+
+.roadmap-group-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #f2eadf;
+  box-shadow: 8px 0 14px rgba(73, 42, 16, 0.08);
+}
+
+.roadmap-stage-spacer {
+  z-index: 3;
 }
 
 .roadmap-title {
@@ -893,7 +906,7 @@ button {
   }
 
   .roadmap-table {
-    grid-template-columns: 58px repeat(var(--stage-count), minmax(118px, 1fr));
+    grid-template-columns: 64px repeat(var(--stage-count), minmax(128px, 1fr));
   }
 
   .saved-list,
