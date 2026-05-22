@@ -1,5 +1,52 @@
+const ROADMAP_CATEGORY_ORDER = [
+  "국제/외교",
+  "방송/미디어",
+  "관광/숙박",
+  "행정/정치",
+  "역사/지역",
+  "경영/경제",
+  "언어/문학",
+  "외국어(영어·일본어·중국어)",
+  "교육",
+  "화학/화학공학",
+  "물리/기계",
+  "전자/전기",
+  "생명/생명공학",
+  "식품",
+  "IT/컴퓨팅",
+  "건설/건축",
+  "에너지",
+  "농수축산",
+  "의료/보건",
+  "간호/보건"
+];
+
+const ROADMAP_CATEGORY_ALIASES = {
+  "영어/일본어/중국어": "외국어(영어·일본어·중국어)"
+};
+
+const ROADMAP_TITLE_ALIASES = {
+  "자극과 반응속도 측정 실험": "자극 종류에 따른 반응속도 측정 실험",
+  "운동과 신체 변화 측정 실험": "운동 강도별 신체 변화 측정 실험",
+  "천연 항균 물질 비교 실험": "천연 항균 물질의 곰팡이 억제 효과 비교",
+  "대체 단백질 비교 탐구보고서": "대체 단백질 성분 비교와 소비자 인식 조사",
+  "효소 활성 비교 실험": "침 속 아밀라아제 온도별 활성 비교",
+  "식물 효소 비교 실험": "과일 효소의 단백질 분해 능력 비교",
+  "생분해 소재 탐구보고서": "생분해 소재 제작과 물성 비교",
+  "광합성 영향 요인 실험": "빛의 색에 따른 광합성 속도 비교",
+  "근육 피로 측정 실험": "운동 강도별 근육 피로와 회복 시간 비교",
+  "DNA 추출 및 비교 실험": "식물 재료별 DNA 추출 비교 실험",
+  "수질 오염 및 정화 실험": "생활 속 물의 pH와 탁도 비교",
+  "바이오플라스틱 탐구보고서": "바이오플라스틱 소재별 물리적 특성 비교",
+  "식물 DNA 추출 비교 실험": "식물 재료별 DNA 추출 비교 실험",
+  "카페인과 신체 반응 측정 실험": "카페인 섭취 전후 신체 반응 비교",
+  "GMO 식품 인식 조사": "GMO 식품 성분표 비교와 인식 조사",
+  "식물 생장 환경 변인 실험": "식물 생장 환경 변인 비교 실험",
+  "감미료 역치 탐구보고서": "감미료 농도별 단맛 인식 역치 조사"
+};
+
 const FILTER_OPTIONS = {
-  tracks: ["인문", "사회", "상경", "자연", "공학", "의약·보건", "교육", "예체능", "융합·자율전공"],
+  tracks: ROADMAP_CATEGORY_ORDER,
   subjects: ["국어", "수학", "외국어", "사회", "역사", "윤리", "물리", "화학", "생명과학", "지구과학", "정보", "기술·가정", "보건", "예술·체육"],
   activityTypes: ["자료조사형", "설문조사형", "실험·측정형", "토론·논증형", "데이터분석형", "제작·설계형", "발표·보고서형", "캠페인·기획형"],
   difficulty: ["기초형", "발전형", "심화형"],
@@ -40,7 +87,10 @@ const savedActivityIds = [];
 const compareVotes = {};
 let compareSelectionIds = [];
 let currentModalActivity = null;
+let currentModalRoadmap = null;
+let roadmapSearch = null;
 let showAllCompareRows = false;
+const roadmapActivityMeta = new Map();
 let currentView = "search";
 
 const searchViewButton = document.querySelector("#search-view-button");
@@ -68,6 +118,9 @@ const modalTitle = document.querySelector("#modal-title");
 const modalContent = document.querySelector("#modal-content");
 const modalCopyButton = document.querySelector("#modal-copy-button");
 const modalSaveButton = document.querySelector("#modal-save-button");
+const modalRoadmapNav = document.querySelector("#modal-roadmap-nav");
+const modalPreviousButton = document.querySelector("#modal-previous-button");
+const modalNextButton = document.querySelector("#modal-next-button");
 const closeModalButton = document.querySelector("#close-modal-button");
 const cardTemplate = document.querySelector("#card-template");
 
@@ -78,6 +131,7 @@ init();
 
 function init() {
   hydrateStateFromUrl();
+  linkRoadmapActivities();
   buildFilters();
   keywordInput.value = state.keyword;
   render();
@@ -95,16 +149,7 @@ function init() {
   });
 
   resetButton.addEventListener("click", () => {
-    Object.keys(state).forEach((key) => {
-      state[key] = "";
-    });
-    visibleResultCount = RESULTS_PAGE_SIZE;
-
-    keywordInput.value = "";
-    filterGrid.querySelectorAll("select").forEach((select) => {
-      select.value = "";
-    });
-
+    clearSearchState();
     syncUrl();
     render();
   });
@@ -142,6 +187,14 @@ function init() {
 
   closeModalButton.addEventListener("click", () => {
     detailModal.close();
+  });
+
+  modalPreviousButton.addEventListener("click", () => moveRoadmapModal(-1));
+  modalNextButton.addEventListener("click", () => moveRoadmapModal(1));
+
+  detailModal.addEventListener("close", () => {
+    currentModalRoadmap = null;
+    syncRoadmapModalNav();
   });
 
   modalCopyButton.addEventListener("click", async () => {
@@ -233,6 +286,10 @@ function hydrateStateFromUrl() {
       state[key] = next;
     }
   });
+
+  if (state.tracks && !FILTER_OPTIONS.tracks.includes(state.tracks)) {
+    state.tracks = "";
+  }
 }
 
 function syncUrl() {
@@ -260,36 +317,75 @@ function setView(view) {
   roadmapPanel.hidden = !isRoadmap;
 }
 
+function linkRoadmapActivities() {
+  if (!window.ROADMAPS || !window.ACTIVITIES) {
+    return;
+  }
+
+  const activitiesByTitle = new Map();
+  window.ACTIVITIES.forEach((activity) => {
+    const matches = activitiesByTitle.get(activity.title) || [];
+    matches.push(activity);
+    activitiesByTitle.set(activity.title, matches);
+  });
+
+  window.ROADMAPS.forEach((roadmap) => {
+    roadmap.groups.forEach((group) => {
+      group.items.forEach((item, index) => {
+        const activityTitle = ROADMAP_TITLE_ALIASES[item.title] || item.title;
+        const candidates = activitiesByTitle.get(activityTitle) || [];
+        const activity = findBestRoadmapActivity(roadmap.category, candidates);
+        if (!activity) {
+          return;
+        }
+
+        item.activityId = activity.id;
+        const meta = roadmapActivityMeta.get(activity.id) || {
+          categories: new Set(),
+          entries: []
+        };
+        meta.categories.add(roadmap.category);
+        meta.entries.push({ roadmap, group, index });
+        roadmapActivityMeta.set(activity.id, meta);
+      });
+    });
+  });
+}
+
+function findBestRoadmapActivity(category, candidates) {
+  return candidates.find((activity) => getCareerRoadmapCategories(activity).includes(category)) || candidates[0] || null;
+}
+
+function getCareerRoadmapCategories(activity) {
+  return (activity.careerFit || [])
+    .map(canonicalRoadmapCategory)
+    .filter(Boolean);
+}
+
+function canonicalRoadmapCategory(value) {
+  const category = ROADMAP_CATEGORY_ALIASES[value] || value;
+  return ROADMAP_CATEGORY_ORDER.includes(category) ? category : "";
+}
+
+function getActivityRoadmapCategories(activity) {
+  const meta = roadmapActivityMeta.get(activity.id);
+  const linkedCategories = meta ? [...meta.categories] : [];
+  return [...new Set([...linkedCategories, ...getCareerRoadmapCategories(activity)])];
+}
+
+function getActivityDisplayTracks(activity) {
+  const roadmapCategories = getActivityRoadmapCategories(activity);
+  return roadmapCategories.length ? roadmapCategories : activity.tracks;
+}
+
 function renderRoadmaps() {
   if (!window.ROADMAPS || !roadmapGrid) {
     return;
   }
 
-  const roadmapOrder = [
-    "국제/외교",
-    "방송/미디어",
-    "관광/숙박",
-    "행정/정치",
-    "역사/지역",
-    "경영/경제",
-    "언어/문학",
-    "외국어(영어·일본어·중국어)",
-    "교육",
-    "화학/화학공학",
-    "물리/기계",
-    "전자/전기",
-    "생명/생명공학",
-    "식품",
-    "IT/컴퓨팅",
-    "건설/건축",
-    "에너지",
-    "농수축산",
-    "의료/보건",
-    "간호/보건"
-  ];
   const orderedRoadmaps = [...window.ROADMAPS].sort((a, b) => {
-    const aIndex = roadmapOrder.indexOf(a.category);
-    const bIndex = roadmapOrder.indexOf(b.category);
+    const aIndex = ROADMAP_CATEGORY_ORDER.indexOf(a.category);
+    const bIndex = ROADMAP_CATEGORY_ORDER.indexOf(b.category);
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
 
@@ -299,7 +395,13 @@ function renderRoadmaps() {
     card.className = "roadmap-card";
 
     const title = document.createElement("h3");
-    title.textContent = roadmap.category;
+    const titleButton = document.createElement("button");
+    titleButton.type = "button";
+    titleButton.className = "roadmap-category-button";
+    titleButton.textContent = roadmap.category;
+    titleButton.setAttribute("aria-label", `${roadmap.category} 계열 활동 검색`);
+    titleButton.addEventListener("click", () => focusRoadmapCategory(roadmap.category));
+    title.append(titleButton);
 
     const table = document.createElement("div");
     table.className = "roadmap-table";
@@ -317,20 +419,24 @@ function renderRoadmaps() {
     });
 
     roadmap.groups.forEach((group) => {
-      const groupLabel = document.createElement("div");
-      groupLabel.className = "roadmap-group-label";
+      const groupLabel = document.createElement("button");
+      groupLabel.type = "button";
+      groupLabel.className = "roadmap-group-label roadmap-group-button";
       groupLabel.textContent = group.name;
+      groupLabel.setAttribute("aria-label", `${roadmap.category} ${group.name} 흐름 검색`);
+      groupLabel.addEventListener("click", () => focusRoadmapGroup(roadmap, group));
       table.append(groupLabel);
 
       roadmap.stages.forEach((stage) => {
-        const item = group.items.find((next) => next.stage === stage);
+        const itemIndex = group.items.findIndex((next) => next.stage === stage);
+        const item = itemIndex === -1 ? null : group.items[itemIndex];
         const button = document.createElement("button");
         button.type = "button";
         button.className = "roadmap-title";
         button.textContent = item ? item.title : "";
         button.disabled = !item;
         if (item) {
-          button.addEventListener("click", () => focusRoadmapTitle(item.title));
+          button.addEventListener("click", () => openRoadmapDetail(roadmap, group, itemIndex));
         }
         table.append(button);
       });
@@ -341,14 +447,55 @@ function renderRoadmaps() {
   });
 }
 
-function focusRoadmapTitle(title) {
-  state.keyword = title;
+function clearSearchState() {
+  Object.keys(state).forEach((key) => {
+    state[key] = "";
+  });
+  roadmapSearch = null;
   visibleResultCount = RESULTS_PAGE_SIZE;
-  keywordInput.value = title;
+  keywordInput.value = "";
+  filterGrid.querySelectorAll("select").forEach((select) => {
+    select.value = "";
+  });
+}
+
+function focusRoadmapCategory(category) {
+  clearSearchState();
+  state.tracks = category;
+  const trackSelect = document.querySelector("#filter-tracks");
+  if (trackSelect) {
+    trackSelect.value = category;
+  }
   syncUrl();
   render();
   setView("search");
+  scrollToSearchResults();
+}
+
+function focusRoadmapGroup(roadmap, group) {
+  clearSearchState();
+  roadmapSearch = {
+    label: `${roadmap.category} · ${group.name}`,
+    activityIds: new Set(group.items.map((item) => item.activityId).filter(Boolean))
+  };
+  syncUrl();
+  render();
+  setView("search");
+  scrollToSearchResults();
+}
+
+function scrollToSearchResults() {
   document.querySelector(".results-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openRoadmapDetail(roadmap, group, index) {
+  const item = group.items[index];
+  const activity = item ? findActivityById(item.activityId) : null;
+  if (!activity) {
+    return;
+  }
+
+  openDetailModal(activity, { roadmap, group, index });
 }
 
 function render() {
@@ -377,7 +524,7 @@ function render() {
 
     createBadge(badges, activity.difficulty, "badge-difficulty");
     createBadge(badges, activity.subjects[0], "badge-subject");
-    createBadge(badges, activity.tracks[0], "badge-track");
+    createBadge(badges, getActivityDisplayTracks(activity)[0], "badge-track");
     createBadge(badges, activity.activityTypes[0], "badge-type");
 
     const cardTitle = fragment.querySelector(".card-title");
@@ -467,7 +614,7 @@ function renderSavedActivities() {
 
       const meta = document.createElement("div");
       meta.className = "saved-chip-meta";
-      meta.textContent = `${activity.difficulty} · ${activity.subjects[0]} · ${activity.tracks[0]}`;
+      meta.textContent = `${activity.difficulty} · ${activity.subjects[0]} · ${getActivityDisplayTracks(activity)[0]}`;
 
       chip.append(title, meta);
 
@@ -701,7 +848,7 @@ function syncModalButtons() {
 }
 
 function syncFilterVisualState() {
-  const hasActiveFilters = Object.values(state).some(Boolean);
+  const hasActiveFilters = Object.values(state).some(Boolean) || Boolean(roadmapSearch);
   resetButton.classList.toggle("has-active-filters", hasActiveFilters);
 
   Object.keys(FILTER_OPTIONS).forEach((key) => {
@@ -719,10 +866,12 @@ function syncFilterVisualState() {
 function matchesFilters(activity) {
   const keyword = state.keyword.toLowerCase();
   const matchesKeyword = !keyword || buildSearchableText(activity).includes(keyword);
+  const matchesRoadmapGroup = !roadmapSearch || roadmapSearch.activityIds.has(activity.id);
 
   return (
     matchesKeyword &&
-    matchesSelect(activity.tracks, state.tracks) &&
+    matchesRoadmapGroup &&
+    matchesSelect(getActivityRoadmapCategories(activity), state.tracks) &&
     matchesSelect(activity.subjects, state.subjects) &&
     matchesSelect(activity.activityTypes, state.activityTypes) &&
     matchesSelect([activity.difficulty], state.difficulty) &&
@@ -759,6 +908,13 @@ function renderActiveFilters() {
       chip.textContent = key === "keyword" ? `검색어: ${value}` : `${FILTER_LABELS[key]}: ${value}`;
       activeFilters.append(chip);
     });
+
+  if (roadmapSearch) {
+    const chip = document.createElement("span");
+    chip.className = "active-chip";
+    chip.textContent = `로드맵 흐름: ${roadmapSearch.label}`;
+    activeFilters.append(chip);
+  }
 }
 
 function createBadge(container, text, className) {
@@ -768,12 +924,14 @@ function createBadge(container, text, className) {
   container.append(badge);
 }
 
-function openDetailModal(activity) {
+function openDetailModal(activity, roadmapContext = null) {
   currentModalActivity = activity;
+  currentModalRoadmap = roadmapContext;
   modalTitle.textContent = activity.title;
   modalContent.innerHTML = "";
   modalContent.scrollTop = 0;
   syncModalButtons();
+  syncRoadmapModalNav();
 
   const summary = document.createElement("section");
   summary.className = "detail-summary";
@@ -781,6 +939,14 @@ function openDetailModal(activity) {
     <p><strong>한 줄 개요</strong><br>${escapeHtml(activity.oneLine)}</p>
     <p><strong>탐구 질문</strong><br>${escapeHtml(activity.inquiryQuestion)}</p>
   `;
+
+  if (currentModalRoadmap) {
+    const currentItem = currentModalRoadmap.group.items[currentModalRoadmap.index];
+    const roadmapContextLabel = document.createElement("p");
+    roadmapContextLabel.className = "detail-roadmap-context";
+    roadmapContextLabel.textContent = `${currentModalRoadmap.roadmap.category} · ${currentModalRoadmap.group.name} · ${currentItem.stage}`;
+    summary.prepend(roadmapContextLabel);
+  }
 
   const versionGrid = document.createElement("div");
   versionGrid.className = "detail-grid detail-version-grid";
@@ -801,8 +967,34 @@ function openDetailModal(activity) {
   );
 
   modalContent.append(summary, versionGrid, grid);
-  detailModal.showModal();
+  if (!detailModal.open) {
+    detailModal.showModal();
+  }
   modalContent.scrollTop = 0;
+}
+
+function syncRoadmapModalNav() {
+  const hasRoadmapContext = Boolean(currentModalRoadmap);
+  modalRoadmapNav.hidden = !hasRoadmapContext;
+  if (!hasRoadmapContext) {
+    return;
+  }
+
+  modalPreviousButton.disabled = currentModalRoadmap.index === 0;
+  modalNextButton.disabled = currentModalRoadmap.index === currentModalRoadmap.group.items.length - 1;
+}
+
+function moveRoadmapModal(offset) {
+  if (!currentModalRoadmap) {
+    return;
+  }
+
+  const nextIndex = currentModalRoadmap.index + offset;
+  if (nextIndex < 0 || nextIndex >= currentModalRoadmap.group.items.length) {
+    return;
+  }
+
+  openRoadmapDetail(currentModalRoadmap.roadmap, currentModalRoadmap.group, nextIndex);
 }
 
 function buildSection(title, items) {
@@ -858,7 +1050,7 @@ function buildActivitySummary(activity, includeTemplate) {
   const lines = [
     `[${activity.title}]`,
     `난이도: ${activity.difficulty}`,
-    `관심 계열: ${activity.tracks.join(", ")}`,
+    `관심 계열: ${getActivityDisplayTracks(activity).join(", ")}`,
     `과목: ${activity.subjects.join(", ")}`,
     `활동 방식: ${activity.activityTypes.join(", ")}`,
     `수행평가 형식: ${activity.assessmentTypes.join(" / ")}`,
