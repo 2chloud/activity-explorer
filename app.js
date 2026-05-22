@@ -945,7 +945,7 @@ function openDetailModal(activity, roadmapContext = null) {
     const roadmapContextLabel = document.createElement("p");
     roadmapContextLabel.className = "detail-roadmap-context";
     roadmapContextLabel.textContent = `${currentModalRoadmap.roadmap.category} · ${currentModalRoadmap.group.name} · ${currentItem.stage}`;
-    summary.prepend(roadmapContextLabel);
+    summary.prepend(roadmapContextLabel, buildRoadmapStageNav(currentModalRoadmap));
   }
 
   const versionGrid = document.createElement("div");
@@ -971,6 +971,34 @@ function openDetailModal(activity, roadmapContext = null) {
     detailModal.showModal();
   }
   modalContent.scrollTop = 0;
+}
+
+function buildRoadmapStageNav(context) {
+  const wrap = document.createElement("nav");
+  wrap.className = "detail-stage-nav";
+  wrap.setAttribute("aria-label", `${context.group.name} 단계 이동`);
+
+  const caption = document.createElement("p");
+  caption.className = "detail-stage-caption";
+  caption.textContent = "같은 활동 흐름";
+
+  const stages = document.createElement("div");
+  stages.className = "detail-stage-list";
+
+  context.group.items.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "detail-stage-button";
+    button.textContent = item.stage;
+    button.setAttribute("aria-label", `${item.stage}: ${item.title}`);
+    button.classList.toggle("is-current", index === context.index);
+    button.setAttribute("aria-current", index === context.index ? "step" : "false");
+    button.addEventListener("click", () => openRoadmapDetail(context.roadmap, context.group, index));
+    stages.append(button);
+  });
+
+  wrap.append(caption, stages);
+  return wrap;
 }
 
 function syncRoadmapModalNav() {

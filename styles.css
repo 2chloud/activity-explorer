@@ -877,6 +877,52 @@ button {
   font-weight: 800;
 }
 
+.detail-stage-nav {
+  margin: 0 0 18px;
+}
+
+.detail-stage-caption {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.detail-stage-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(86px, 1fr));
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.detail-stage-button {
+  min-height: 42px;
+  border: 1px solid rgba(117, 100, 78, 0.16);
+  border-radius: 10px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.detail-stage-button:hover,
+.detail-stage-button:focus-visible {
+  border-color: rgba(191, 91, 44, 0.38);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--brand-deep);
+}
+
+.detail-stage-button.is-current {
+  border-color: rgba(191, 91, 44, 0.5);
+  background: var(--brand);
+  color: white;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
